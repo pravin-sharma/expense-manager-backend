@@ -2,7 +2,6 @@ const CustomError = require('./CustomError');
 
 errorHandler = (err, req, res, next) =>{
     console.log(err);
-    console.log('here')
 
     //handle custmom error
     if(err instanceof CustomError){
@@ -10,7 +9,7 @@ errorHandler = (err, req, res, next) =>{
     }
 
     //handle default error
-    return res.status(500).json({message: 'Something broke'});
+    return res.status(500).json({message: err.message});
 }
 
 module.exports = errorHandler;
