@@ -4,14 +4,16 @@ const cookieParser = require('cookie-parser');
 
 const errorHandler = require('./util/Error/errorHandler');
 
+//middleware
+app.use(express.json());
+app.use(cookieParser());
+
 
 //Import Routes
-const testRoute = require('./routes/test');
-
-app.use(cookieParser())
+const userRoute = require('./routes/userRoute');
 
 //Routes
-app.use('/api/v1',testRoute);
+app.use('/api/v1', userRoute);
 app.use('*', (req,res)=>res.status(404).json({message: "Invalid path"}))
 
 //Error Handler
