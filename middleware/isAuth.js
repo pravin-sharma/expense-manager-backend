@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const CustomError = require("../util/Error/CustomError");
 
 exports.isAuth = async (req, res, next) => {
-  const token = req.cookie.token;
+  const token = req.cookies?.token;
 
   if (!token) {
     return next(CustomError.unauthorized("Please login first to proceed"));
@@ -12,7 +12,7 @@ exports.isAuth = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded._id);
+    req.user = await User.findById(decoded.id);
 
     if (!req.user) {
       console.log("JWT Malformed");
