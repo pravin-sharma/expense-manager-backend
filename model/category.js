@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const categorySchema = new mongoose.Schema({
   isDefault: {
     type: Boolean,
+    default: false
   },
   userId: {
     type: mongoose.Types.ObjectId,
