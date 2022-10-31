@@ -7,13 +7,16 @@ const errorHandler = require('./util/Error/errorHandler');
 //middleware
 app.use(express.json());
 app.use(cookieParser());
+//TODO: use CORS after you get cors error
 
 
 //Import Routes
 const userRoute = require('./routes/userRoute');
+const categoryRoute = require('./routes/categoryRoute');
 
 //Routes
 app.use('/api/v1', userRoute);
+app.use('/api/v1', categoryRoute);
 app.use('*', (req,res)=>res.status(404).json({message: "Invalid path"}))
 
 //Error Handler

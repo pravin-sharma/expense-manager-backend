@@ -61,7 +61,6 @@ exports.login = async (req, res, next) => {
 
     //create jwt
     const token = user.getJwt();
-    console.log(token)
 
     //send jwt in cookie
     const options = {
