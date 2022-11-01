@@ -1,6 +1,7 @@
 const Expense = require("../model/expense");
 const Category = require("../model/category");
 const CustomError = require("../util/Error/CustomError");
+const mailer = require('../util/mailer');
 
 //add
 //TODO: after adding every expense update the expenseTotal for that category, if expenseDate(expense) is between budgetStartDate and budgetEndDate
@@ -34,6 +35,12 @@ exports.addExpense = async (req, res, next) => {
     category.expenseTotal = category.expenseTotal + expense.cost;
     await category.save();
     // TODO: while saving the expenseTotal, check expenseTotal > budget in category, send mail
+
+    if(category.expenseTotal > category.budget){
+      let overBudgetByAmount = category.expenseTotal - category.budget;
+      isOverBudget = true;
+      await mailer(req.user.name, req.user.email, category.categoryName, category.budget, overBudgetByAmount);
+    }
 
     return res.status(201).json({
       success: true,
