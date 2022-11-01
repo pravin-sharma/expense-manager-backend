@@ -124,13 +124,13 @@ exports.getAllExpensesByCategory = async (req, res, next) => {
 exports.updateExpense = async (req, res, next) => {
   const expenseId = req.params.id;
   const userId = req.user.id;
+  const { categoryId, item, cost, expenseDate } = req.body;
+
   try {
-    const expense = await Expense.findOneAndUpdate(
+    let expense = await Expense.findOneAndUpdate(
       { _id: expenseId, userId },
       req.body,
-      {
-        new: true,
-      }
+      { new: true }
     );
 
     if (!expense) {
@@ -165,6 +165,10 @@ exports.deleteExpense = async (req, res, next) => {
         CustomError.badRequest(`Expense with the id: ${expenseId} not found`)
       );
     }
+
+    const category = await Category.findById(expense.categoryId);
+    category.expenseTotal = category.expenseTotal - expense.cost;
+    await category.save();
 
     return res.status(202).json({
       success: true,
