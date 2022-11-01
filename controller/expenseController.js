@@ -1,12 +1,10 @@
 const Expense = require("../model/expense");
 const Category = require("../model/category");
 const CustomError = require("../util/Error/CustomError");
-const mailer = require('../util/mailer');
+const mailer = require("../util/mailer");
 
 //add
-//TODO: after adding every expense update the expenseTotal for that category, if expenseDate(expense) is between budgetStartDate and budgetEndDate
-//TODO: if the expenseTotal > budget, send mail to user
-//TODO: if while adding expense, user chooses a category which is not present, then create a new category (Handle in Category Controller) 
+//TODO: if while adding expense, user chooses a category which is not present, then create a new category (Handle in Category Controller)
 exports.addExpense = async (req, res, next) => {
   const { categoryId, item, cost, expenseDate } = req.body;
   const userId = req.user.id;
@@ -14,13 +12,17 @@ exports.addExpense = async (req, res, next) => {
 
   try {
     //Check if categoryId belongs to a valid Category, then only add expense
-    if(!categoryId){
-      return next(CustomError.badRequest(`Please provide a valid Category`))
+    if (!categoryId) {
+      return next(CustomError.badRequest(`Please provide a valid Category`));
     }
 
     let category = await Category.findById(categoryId);
-    if(!category){
-      return next(CustomError.badRequest(`Please add a valid Category, Category ${categoryId} does not exist`))
+    if (!category) {
+      return next(
+        CustomError.badRequest(
+          `Please add a valid Category, Category ${categoryId} does not exist`
+        )
+      );
     }
 
     //Add expense
@@ -32,21 +34,27 @@ exports.addExpense = async (req, res, next) => {
       expenseDate,
     });
 
+    //TODO: after adding every expense update the expenseTotal for that category, if expenseDate(expense) is between budgetStartDate and budgetEndDate
     category.expenseTotal = category.expenseTotal + expense.cost;
     await category.save();
-    // TODO: while saving the expenseTotal, check expenseTotal > budget in category, send mail
 
-    if(category.expenseTotal > category.budget){
+    if (category.expenseTotal > category.budget) {
       let overBudgetByAmount = category.expenseTotal - category.budget;
       isOverBudget = true;
-      await mailer(req.user.name, req.user.email, category.categoryName, category.budget, overBudgetByAmount);
+      await mailer(
+        req.user.name,
+        req.user.email,
+        category.categoryName,
+        category.budget,
+        overBudgetByAmount
+      );
     }
 
     return res.status(201).json({
       success: true,
       message: `Expense created`,
       expense,
-      isOverBudget
+      isOverBudget,
     });
   } catch (error) {
     return next(new Error(error));
@@ -80,7 +88,10 @@ exports.getOneExpense = async (req, res, next) => {
 exports.getAllExpenses = async (req, res, next) => {
   const userId = req.user?.id;
   try {
-    const expenses = await Expense.find({ userId }).populate('categoryId', 'categoryName');
+    const expenses = await Expense.find({ userId }).populate(
+      "categoryId",
+      "categoryName"
+    );
 
     if (!expenses.length) {
       return res.status(200).json({
