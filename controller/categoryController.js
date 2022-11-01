@@ -77,6 +77,7 @@ exports.getAllCategories = async (req, res, next) => {
 };
 
 //update a category
+//TODO: Use onblur on frontend and hit api on each onblur
 // TODO: Stop user from updating default category, only admin can do that
 exports.updateCategory = async (req, res, next) => {
   const categoryId = req.params.id;
@@ -111,6 +112,7 @@ exports.updateCategory = async (req, res, next) => {
 
 //delete a category
 //TODO: stop user from deleting the default category, only admin can do that
+// TODO: stop user from deleting category, if expenses exists with that category
 exports.deleteCategory = async (req, res, next) => {
   const categoryId = req.params?.id;
   const userId = req.user.id;
