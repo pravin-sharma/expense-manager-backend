@@ -28,6 +28,7 @@ const categorySchema = new mongoose.Schema({
   },
   expenseTotal: {
     type: Number,
+    default: 0
   },
   createdAt: {
     type: Date,
@@ -37,4 +38,4 @@ const categorySchema = new mongoose.Schema({
   },
 });
 
-module.exports = mongoose.model("category", categorySchema);
+module.exports = mongoose.model("Category", categorySchema);
