@@ -2,6 +2,7 @@ const Expense = require("../model/expense");
 const Category = require("../model/category");
 const CustomError = require("../util/Error/CustomError");
 const mailer = require("../util/mailer");
+const mongoose = require("mongoose");
 
 //add
 //TODO: if while adding expense, user chooses a category which is not present, then create a new category (Handle in Category Controller)
@@ -113,8 +114,57 @@ exports.getAllExpenses = async (req, res, next) => {
 
 //get all category wise
 exports.getAllExpensesByCategory = async (req, res, next) => {
+  const userId = req.user.id;
+  let pipeline = [
+    {
+      $match: {
+        userId: new mongoose.Types.ObjectId(userId),
+      },
+    },
+    {
+      $group: {
+        _id: "$categoryId",
+        expenses: {
+          $push: {
+            _id: "$_id",
+            userId: "$userId",
+            item: "$item",
+            cost: "$cost",
+            expenseDate: "$expenseDate",
+          },
+        },
+      },
+    },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "_id",
+        foreignField: "_id",
+        as: "category",
+      },
+    },
+    {
+      $unwind: {
+        path: "$category",
+      },
+    },
+    {
+      $project: {
+        _id: 1.0,
+        categoryName: "$category.categoryName",
+        expenses: 1.0,
+      },
+    },
+  ];
+
   try {
-    //TODO: use a aggregate/group query
+    const expensesByCategories = await Expense.aggregate(pipeline);
+
+    return res.status(200).json({
+      success: true,
+      message: `Found expenses by categories`,
+      expensesByCategories,
+    });
   } catch (error) {
     return next(new Error(error));
   }
