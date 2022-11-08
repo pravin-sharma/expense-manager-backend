@@ -1,13 +1,12 @@
 const express = require('express');
 const app = express();
-const cookieParser = require('cookie-parser');
+const cors = require('cors');
 
 const errorHandler = require('./util/Error/errorHandler');
 
 //middleware
 app.use(express.json());
-app.use(cookieParser());
-//TODO: use CORS after you get cors error
+app.use(cors())
 
 
 //Import Routes
