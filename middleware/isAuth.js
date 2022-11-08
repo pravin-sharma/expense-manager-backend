@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const CustomError = require("../util/Error/CustomError");
 
 exports.isAuth = async (req, res, next) => {
-  const token = req.cookies?.token;
+  const token = req.headers.authorization?.split(" ")[1];
 
   if (!token) {
     return next(CustomError.unauthorized("Please login first to proceed"));
