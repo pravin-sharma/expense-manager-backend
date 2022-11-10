@@ -9,7 +9,6 @@ const {
   updateCategory,
 } = require("../controller/categoryController");
 
-// TODO: Add isAuthx
 router.post('/category/add', isAuth, addCategory);
 router.delete('/category/delete/:id', isAuth, deleteCategory);
 router.get('/category/get/:id', isAuth, getOneCategory);
