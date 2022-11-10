@@ -3,6 +3,7 @@ const Category = require("../model/category");
 const CustomError = require("../util/Error/CustomError");
 const mailer = require("../util/mailer");
 const mongoose = require("mongoose");
+const moment = require("moment/moment");
 
 //add
 exports.addExpense = async (req, res, next) => {
@@ -167,15 +168,47 @@ exports.getOneExpense = async (req, res, next) => {
   }
 };
 
-//get all
-exports.getAllExpenses = async (req, res, next) => {
-  const userId = req.user?.id;
+// new get all expenses api with category and period filter;
+exports.getAll = async (req, res, next) => {
+  const userId = req.user.id;
 
+  const categoryId = req.query.categoryId; // nothing or categoryId //nothing tends to all
+  const period = req.query.period; // nothing,7,30 //nothing is all
+
+  let startDate;
+  let endDate;
+  if (!period) {
+    startDate = "1900-01-01";
+    endDate = "9999-12-31";
+  } else {
+    startDate = moment().subtract(parseInt(period), "d").format("yyyy-MM-DD");
+    endDate = moment().format("yyyy-MM-DD");
+  }
+
+  let query;
+  if (!categoryId) {
+    query = {
+      userId: new mongoose.Types.ObjectId(userId),
+      expenseDate: {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      },
+    };
+  } else {
+    query = {
+      userId: new mongoose.Types.ObjectId(userId),
+      categoryId: new mongoose.Types.ObjectId(categoryId),
+      expenseDate: {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      },
+    };
+  }
+
+  //pipline to get categoryName and format date
   const pipeline = [
     {
-      $match: {
-        userId: new mongoose.Types.ObjectId(userId),
-      },
+      $match: query,
     },
     {
       $lookup: {
@@ -208,6 +241,8 @@ exports.getAllExpenses = async (req, res, next) => {
     },
   ];
 
+  console.log(JSON.stringify(pipeline));
+
   try {
     const expenses = await Expense.aggregate(pipeline);
 
@@ -223,64 +258,6 @@ exports.getAllExpenses = async (req, res, next) => {
       message: `Expenses found`,
       success: true,
       expenses,
-    });
-  } catch (error) {
-    return next(new Error(error));
-  }
-};
-
-//get all category wise
-exports.getAllExpensesByCategory = async (req, res, next) => {
-  const userId = req.user.id;
-  let pipeline = [
-    {
-      $match: {
-        userId: new mongoose.Types.ObjectId(userId),
-      },
-    },
-    {
-      $group: {
-        _id: "$categoryId",
-        expenses: {
-          $push: {
-            _id: "$_id",
-            userId: "$userId",
-            item: "$item",
-            cost: "$cost",
-            expenseDate: "$expenseDate",
-          },
-        },
-      },
-    },
-    {
-      $lookup: {
-        from: "categories",
-        localField: "_id",
-        foreignField: "_id",
-        as: "category",
-      },
-    },
-    {
-      $unwind: {
-        path: "$category",
-      },
-    },
-    {
-      $project: {
-        _id: 1.0,
-        categoryName: "$category.categoryName",
-        expenses: 1.0,
-      },
-    },
-  ];
-
-  try {
-    const expensesByCategories = await Expense.aggregate(pipeline);
-
-    return res.status(200).json({
-      success: true,
-      message: `Found expenses by categories`,
-      expensesByCategories,
     });
   } catch (error) {
     return next(new Error(error));
