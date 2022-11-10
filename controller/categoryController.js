@@ -1,5 +1,7 @@
+const { default: mongoose } = require("mongoose");
 const Category = require("../model/category");
 const CustomError = require("../util/Error/CustomError");
+const moment = require("moment");
 
 //add category
 exports.addCategory = async (req, res, next) => {
@@ -16,6 +18,14 @@ exports.addCategory = async (req, res, next) => {
       budgetStartDate,
       budgetEndDate,
     });
+
+    // Date Formatting
+    category._doc.budgetStartDate = moment(category.budgetStartDate).format(
+      "yyyy-MM-DD"
+    );
+    category._doc.budgetEndDate = moment(category.budgetEndDate).format(
+      "yyyy-MM-DD"
+    );
 
     return res.status(201).json({
       message: `Category ${categoryName} created`,
@@ -51,13 +61,41 @@ exports.getOneCategory = async (req, res, next) => {
   }
 };
 
-//get all category (default + user specific)
+//get all category
 exports.getAllCategories = async (req, res, next) => {
   const userId = req.user?.id;
+
+  const pipeline = [
+    {
+      $match: {
+        userId: new mongoose.Types.ObjectId(userId),
+      },
+    },
+    {
+      $project: {
+        isDefault: true,
+        categoryName: true,
+        budget: true,
+        expenseTotal: true,
+        budgetStartDate: {
+          $dateToString: {
+            format: "%Y-%m-%d",
+            date: "$budgetStartDate",
+          },
+        },
+        budgetEndDate: {
+          $dateToString: {
+            format: "%Y-%m-%d",
+            date: "$budgetEndDate",
+          },
+        },
+      },
+    },
+  ];
+
   try {
-    const categories = await Category.find({
-      $or: [{ userId }, { isDefault: true }],
-    });
+    const categories = await Category.aggregate(pipeline);
+
     if (!categories) {
       return res.status(404).json({
         success: false,
@@ -77,15 +115,13 @@ exports.getAllCategories = async (req, res, next) => {
 };
 
 //update a category
-//TODO: Use onblur on frontend and hit api on each onblur
-// TODO: Stop user from updating default category, only admin can do that
 exports.updateCategory = async (req, res, next) => {
   const categoryId = req.params.id;
   const userId = req.user.id;
 
   try {
     const category = await Category.findOneAndUpdate(
-      { _id: categoryId, userId, isDefault: false },
+      { _id: categoryId, userId },
       req.body,
       {
         new: true,
@@ -95,10 +131,18 @@ exports.updateCategory = async (req, res, next) => {
     if (!category) {
       return next(
         CustomError.badRequest(
-          `Category with the id: ${categoryId} not found / is default category and cannot be updated`
+          `Category with the id: ${categoryId} not found`
         )
       );
     }
+
+    // Date Formatting
+    category._doc.budgetStartDate = moment(category.budgetStartDate).format(
+      "yyyy-MM-DD"
+    );
+    category._doc.budgetEndDate = moment(category.budgetEndDate).format(
+      "yyyy-MM-DD"
+    );
 
     return res.status(200).json({
       success: true,
@@ -111,7 +155,6 @@ exports.updateCategory = async (req, res, next) => {
 };
 
 //delete a category
-//TODO: stop user from deleting the default category, only admin can do that
 // TODO: stop user from deleting category, if expenses exists with that category
 exports.deleteCategory = async (req, res, next) => {
   const categoryId = req.params?.id;
@@ -120,22 +163,21 @@ exports.deleteCategory = async (req, res, next) => {
   try {
     const category = await Category.findOneAndDelete({
       _id: categoryId,
-      userId,
-      isDefault: false,
+      userId
     });
 
     if (!category) {
       return next(
         CustomError.badRequest(
-          `Category with the id: ${categoryId} not found / is default category and cannot be deleted`
+          `Category with the id: ${categoryId} not found`
         )
       );
     }
-    //TODO: check how the response acts with 204
+
     return res.status(202).json({
       success: true,
       message: `Category with id: ${categoryId} deleted.`,
-      category
+      category,
     });
   } catch (error) {
     return next(new Error(error));
