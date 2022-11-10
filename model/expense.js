@@ -35,7 +35,7 @@ expenseSchema.pre("findOneAndUpdate", async function (next) {
   const docToUpdate = await this.model.find(this.getQuery());
 
   //Case 1: categoryId update
-  //TODO: incase of change in categoryId, remove it's expense from one category and add it to another
+  //incase of change in categoryId, remove it's expense from one category and add it to another
   if (
     this._update.categoryId &&
     this._update.categoryId !== docToUpdate[0].categoryId.toString()
