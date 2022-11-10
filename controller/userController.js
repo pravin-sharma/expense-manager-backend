@@ -1,5 +1,7 @@
 const User = require("../model/user");
 const CustomError = require("../util/Error/CustomError");
+const Category = require("../model/category");
+const moment = require("moment");
 
 //register
 exports.register = async (req, res, next) => {
@@ -27,6 +29,58 @@ exports.register = async (req, res, next) => {
     //get JWT
     const token = user.getJwt();
     console.log("Server token:", token);
+
+    //Adding default categories for new user
+    const defaultCategories = [
+      {
+        isDefault: true,
+        userId: user._id,
+        categoryName: "Entertainment",
+        budget: 5000,
+        budgetStartDate: moment().startOf("month").format("yyyy-MM-DD"),
+        budgetEndDate: moment().endOf("month").format("yyyy-MM-DD"),
+        expenseTotal: 0,
+      },
+      {
+        isDefault: true,
+        userId: user._id,
+        categoryName: "Food & Drinks",
+        budget: 5000,
+        budgetStartDate: moment().startOf("month").format("yyyy-MM-DD"),
+        budgetEndDate: moment().endOf("month").format("yyyy-MM-DD"),
+        expenseTotal: 0,
+      },
+      {
+        isDefault: true,
+        userId: user._id,
+        categoryName: "Shopping",
+        budget: 10000,
+        budgetStartDate: moment().startOf("month").format("yyyy-MM-DD"),
+        budgetEndDate: moment().endOf("month").format("yyyy-MM-DD"),
+        expenseTotal: 0,
+      },
+      {
+        isDefault: true,
+        userId: user._id,
+        categoryName: "Housing",
+        budget: 20000,
+        budgetStartDate: moment().startOf("month").format("yyyy-MM-DD"),
+        budgetEndDate: moment().endOf("month").format("yyyy-MM-DD"),
+        expenseTotal: 0,
+      },
+      {
+        isDefault: true,
+        userId: user._id,
+        categoryName: "Health",
+        budget: 7000,
+        budgetStartDate: moment().startOf("month").format("yyyy-MM-DD"),
+        budgetEndDate: moment().endOf("month").format("yyyy-MM-DD"),
+        expenseTotal: 0,
+      },
+    ];
+
+    const categories = await Category.insertMany(defaultCategories);
+
     return res.status(200).json({
       success: true,
       message: `User '${name}' added.`,

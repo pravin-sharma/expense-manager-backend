@@ -5,7 +5,6 @@ const mailer = require("../util/mailer");
 const mongoose = require("mongoose");
 
 //add
-//TODO: if while adding expense, user chooses a category which is not present, then create a new category (Handle in Category Controller)
 exports.addExpense = async (req, res, next) => {
   const { categoryId, item, cost, expenseDate } = req.body;
   const userId = req.user.id;
@@ -51,10 +50,56 @@ exports.addExpense = async (req, res, next) => {
       );
     }
 
+    //get added expense along with Category Name and Formatted Date
+    const pipeline = [
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+          _id: new mongoose.Types.ObjectId(expense._id),
+        },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "categoryId",
+          foreignField: "_id",
+          as: "category",
+        },
+      },
+      {
+        $unwind: {
+          path: "$category",
+        },
+      },
+      {
+        $project: {
+          _id: true,
+          userId: true,
+          categoryId: true,
+          categoryName: "$category.categoryName",
+          item: true,
+          cost: true,
+          expenseDate: {
+            $dateToString: {
+              format: "%Y-%m-%d",
+              date: "$expenseDate",
+            },
+          },
+        },
+      },
+    ];
+
+    const expenseFetch = await Expense.aggregate(pipeline);
+    if (!expenseFetch) {
+      return next(
+        CustomError.notFound(`Expense with id: ${expense._id} not found`)
+      );
+    }
+
     return res.status(201).json({
       success: true,
       message: `Expense created`,
-      expense,
+      expense: expenseFetch[0],
       isOverBudget,
     });
   } catch (error) {
@@ -66,9 +111,46 @@ exports.addExpense = async (req, res, next) => {
 exports.getOneExpense = async (req, res, next) => {
   const expenseId = req.params.id;
   const userId = req.user.id;
+  const pipeline = [
+    {
+      $match: {
+        userId: new mongoose.Types.ObjectId(userId),
+        _id: new mongoose.Types.ObjectId(expenseId),
+      },
+    },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "categoryId",
+        foreignField: "_id",
+        as: "category",
+      },
+    },
+    {
+      $unwind: {
+        path: "$category",
+      },
+    },
+    {
+      $project: {
+        _id: true,
+        userId: true,
+        categoryId: true,
+        categoryName: "$category.categoryName",
+        item: true,
+        cost: true,
+        expenseDate: {
+          $dateToString: {
+            format: "%Y-%m-%d",
+            date: "$expenseDate",
+          },
+        },
+      },
+    },
+  ];
 
   try {
-    const expense = await Expense.find({ _id: expenseId, userId });
+    const expense = await Expense.aggregate(pipeline);
     if (!expense) {
       return next(
         CustomError.notFound(`Expense with id: ${expenseId} not found`)
@@ -76,9 +158,9 @@ exports.getOneExpense = async (req, res, next) => {
     }
 
     return res.status(200).json({
-      message: `Expense with id: ${expense._id} found`,
+      message: `Expense with id: ${expense[0]._id} found`,
       success: true,
-      expense,
+      expense: expense[0],
     });
   } catch (error) {
     return next(new Error(error));
@@ -88,11 +170,46 @@ exports.getOneExpense = async (req, res, next) => {
 //get all
 exports.getAllExpenses = async (req, res, next) => {
   const userId = req.user?.id;
+
+  const pipeline = [
+    {
+      $match: {
+        userId: new mongoose.Types.ObjectId(userId),
+      },
+    },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "categoryId",
+        foreignField: "_id",
+        as: "category",
+      },
+    },
+    {
+      $unwind: {
+        path: "$category",
+      },
+    },
+    {
+      $project: {
+        _id: true,
+        userId: true,
+        categoryId: true,
+        categoryName: "$category.categoryName",
+        item: true,
+        cost: true,
+        expenseDate: {
+          $dateToString: {
+            format: "%Y-%m-%d",
+            date: "$expenseDate",
+          },
+        },
+      },
+    },
+  ];
+
   try {
-    const expenses = await Expense.find({ userId }).populate(
-      "categoryId",
-      "categoryName"
-    );
+    const expenses = await Expense.aggregate(pipeline);
 
     if (!expenses.length) {
       return res.status(200).json({
@@ -189,10 +306,57 @@ exports.updateExpense = async (req, res, next) => {
       );
     }
 
+    //get updated expense along with Category Name and Formatted Date
+    const pipeline = [
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+          _id: new mongoose.Types.ObjectId(expense._id),
+        },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "categoryId",
+          foreignField: "_id",
+          as: "category",
+        },
+      },
+      {
+        $unwind: {
+          path: "$category",
+        },
+      },
+      {
+        $project: {
+          _id: true,
+          userId: true,
+          categoryId: true,
+          categoryName: "$category.categoryName",
+          item: true,
+          cost: true,
+          expenseDate: {
+            $dateToString: {
+              format: "%Y-%m-%d",
+              date: "$expenseDate",
+            },
+          },
+        },
+      },
+    ];
+
+    const expenseFetch = await Expense.aggregate(pipeline);
+
+    if (!expenseFetch) {
+      return next(
+        CustomError.notFound(`Expense with id: ${expense._id} not found`)
+      );
+    }
+
     return res.status(200).json({
       success: true,
       message: `Expense with id: ${expenseId} updated`,
-      expense,
+      expense: expenseFetch[0],
     });
   } catch (error) {
     return next(new Error(error));
