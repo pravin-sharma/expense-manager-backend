@@ -3,8 +3,6 @@ const router = require("express").Router();
 const {
   addExpense,
   deleteExpense,
-  getAllExpenses,
-  getAllExpensesByCategory,
   getOneExpense,
   updateExpense,
   getAll,

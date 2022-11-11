@@ -4,6 +4,7 @@ const CustomError = require("../util/Error/CustomError");
 const mailer = require("../util/mailer");
 const mongoose = require("mongoose");
 const moment = require("moment/moment");
+const checkExpenseDateIsBetween = require("../util/checkDateIsInBetween");
 
 //add
 exports.addExpense = async (req, res, next) => {
@@ -17,15 +18,6 @@ exports.addExpense = async (req, res, next) => {
       return next(CustomError.badRequest(`Please provide a valid Category`));
     }
 
-    let category = await Category.findById(categoryId);
-    if (!category) {
-      return next(
-        CustomError.badRequest(
-          `Please add a valid Category, Category ${categoryId} does not exist`
-        )
-      );
-    }
-
     //Add expense
     const expense = await Expense.create({
       userId,
@@ -35,14 +27,27 @@ exports.addExpense = async (req, res, next) => {
       expenseDate,
     });
 
-    //TODO: after adding every expense update the expenseTotal for that category, if expenseDate(expense) is between budgetStartDate and budgetEndDate
-    category.expenseTotal = category.expenseTotal + expense.cost;
-    await category.save();
+    let category = await Category.findById(categoryId);
+    if (!category) {
+      return next(
+        CustomError.badRequest(
+          `Please add a valid Category, Category ${categoryId} does not exist`
+        )
+      );
+    }
 
-    if (category.expenseTotal > category.budget) {
+    /*add only if the expense date(expense.expenseDate)
+    is between startDate(category.budgetStartDate) and the endDate(category.budgetEndDate)*/
+    const isExpenseDateBetweenBudgetDate = checkExpenseDateIsBetween(expense, category);
+    if (isExpenseDateBetweenBudgetDate) {
+      category.expenseTotal = category.expenseTotal + expense.cost;
+      category = await category.save();
+    }
+
+    if (isExpenseDateBetweenBudgetDate && (category.expenseTotal > category.budget)) {
       let overBudgetByAmount = category.expenseTotal - category.budget;
       isOverBudget = true;
-      await mailer(
+      mailer(
         req.user.name,
         req.user.email,
         category.categoryName,
@@ -91,6 +96,7 @@ exports.addExpense = async (req, res, next) => {
     ];
 
     const expenseFetch = await Expense.aggregate(pipeline);
+
     if (!expenseFetch) {
       return next(
         CustomError.notFound(`Expense with id: ${expense._id} not found`)
@@ -177,7 +183,7 @@ exports.getAll = async (req, res, next) => {
 
   let startDate;
   let endDate;
-  if (!period) {
+  if (!period || period == "" || period == "undefined") {
     startDate = "1900-01-01";
     endDate = "9999-12-31";
   } else {
@@ -186,7 +192,7 @@ exports.getAll = async (req, res, next) => {
   }
 
   let query;
-  if (!categoryId) {
+  if (!categoryId || categoryId == "" || categoryId == "undefined") {
     query = {
       userId: new mongoose.Types.ObjectId(userId),
       expenseDate: {
@@ -241,7 +247,7 @@ exports.getAll = async (req, res, next) => {
     },
   ];
 
-  console.log(JSON.stringify(pipeline));
+  // console.log(JSON.stringify(pipeline));
 
   try {
     const expenses = await Expense.aggregate(pipeline);
@@ -357,9 +363,15 @@ exports.deleteExpense = async (req, res, next) => {
       );
     }
 
-    const category = await Category.findById(expense.categoryId);
-    category.expenseTotal = category.expenseTotal - expense.cost;
-    await category.save();
+    let category = await Category.findById(expense.categoryId);
+
+    /*add only if the expense date(expense.expenseDate)
+    is between startDate(category.budgetStartDate) and the endDate(category.budgetEndDate)*/
+    const isExpenseDateBetweenBudgetDate = checkExpenseDateIsBetween(expense, category);
+    if (isExpenseDateBetweenBudgetDate) {
+      category.expenseTotal = category.expenseTotal - expense.cost;
+      category = await category.save();
+    }
 
     return res.status(202).json({
       success: true,
