@@ -17,15 +17,6 @@ exports.addExpense = async (req, res, next) => {
       return next(CustomError.badRequest(`Please provide a valid Category`));
     }
 
-    let category = await Category.findById(categoryId);
-    if (!category) {
-      return next(
-        CustomError.badRequest(
-          `Please add a valid Category, Category ${categoryId} does not exist`
-        )
-      );
-    }
-
     //Add expense
     const expense = await Expense.create({
       userId,
@@ -36,13 +27,21 @@ exports.addExpense = async (req, res, next) => {
     });
 
     //TODO: after adding every expense update the expenseTotal for that category, if expenseDate(expense) is between budgetStartDate and budgetEndDate
+    let category = await Category.findById(categoryId);
+    if (!category) {
+      return next(
+        CustomError.badRequest(
+          `Please add a valid Category, Category ${categoryId} does not exist`
+        )
+      );
+    }
     category.expenseTotal = category.expenseTotal + expense.cost;
     await category.save();
 
     if (category.expenseTotal > category.budget) {
       let overBudgetByAmount = category.expenseTotal - category.budget;
       isOverBudget = true;
-      await mailer(
+    mailer(
         req.user.name,
         req.user.email,
         category.categoryName,
@@ -91,6 +90,7 @@ exports.addExpense = async (req, res, next) => {
     ];
 
     const expenseFetch = await Expense.aggregate(pipeline);
+
     if (!expenseFetch) {
       return next(
         CustomError.notFound(`Expense with id: ${expense._id} not found`)
@@ -101,7 +101,7 @@ exports.addExpense = async (req, res, next) => {
       success: true,
       message: `Expense created`,
       expense: expenseFetch[0],
-      isOverBudget,
+      isOverBudget
     });
   } catch (error) {
     return next(new Error(error));
@@ -177,7 +177,7 @@ exports.getAll = async (req, res, next) => {
 
   let startDate;
   let endDate;
-  if (!period) {
+  if (!period || period == '' || period == 'undefined' ) {
     startDate = "1900-01-01";
     endDate = "9999-12-31";
   } else {
@@ -186,7 +186,7 @@ exports.getAll = async (req, res, next) => {
   }
 
   let query;
-  if (!categoryId) {
+  if (!categoryId || categoryId == '' || categoryId == 'undefined') {
     query = {
       userId: new mongoose.Types.ObjectId(userId),
       expenseDate: {
@@ -241,7 +241,7 @@ exports.getAll = async (req, res, next) => {
     },
   ];
 
-  console.log(JSON.stringify(pipeline));
+  // console.log(JSON.stringify(pipeline));
 
   try {
     const expenses = await Expense.aggregate(pipeline);
