@@ -365,7 +365,7 @@ exports.deleteExpense = async (req, res, next) => {
 
     let category = await Category.findById(expense.categoryId);
 
-    /*add only if the expense date(expense.expenseDate)
+    /*delete only if the expense date(expense.expenseDate)
     is between startDate(category.budgetStartDate) and the endDate(category.budgetEndDate)*/
     const isExpenseDateBetweenBudgetDate = checkExpenseDateIsBetween(expense, category);
     if (isExpenseDateBetweenBudgetDate) {

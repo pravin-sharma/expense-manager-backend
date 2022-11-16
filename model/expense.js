@@ -61,7 +61,7 @@ expenseSchema.pre("findOneAndUpdate", async function (next) {
     try {
       const category = await Category.findById(docToUpdate[0].categoryId);
       category.expenseTotal =
-        category.expenseTotal - docToUpdate[0].cost + this._update.cost;
+        category.expenseTotal - docToUpdate[0].cost + parseInt(this._update.cost);
       await category.save();
     } catch (error) {
       return next(new Error(error));
