@@ -12,16 +12,19 @@ exports.register = async (req, res, next) => {
     return next(CustomError.badRequest("Please fill all the fields"));
   }
 
+  //convert email to lower case
+  let emailLowerCase = email.toLowerCase(); 
+
   try {
     //check if user already exists
-    const userExists = await User.find({ email });
+    const userExists = await User.find({ email: emailLowerCase });
     if (userExists.length > 0) {
       return next(CustomError.badRequest("User already exists"));
     }
 
     const user = await User.create({
       name,
-      email,
+      email: emailLowerCase,
       password,
     });
     user.password = undefined;
@@ -99,9 +102,12 @@ exports.login = async (req, res, next) => {
     return next(CustomError.badRequest("Please fill all the fields"));
   }
 
+  // email to lower case
+  let emailLowerCase = email.toLowerCase();
+
   try {
     //check if email exists
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: emailLowerCase });
     if (!user) {
       console.log(`User with ${email} does not exist`);
       return next(CustomError.unauthorized("Email or password incorrect"));
@@ -114,9 +120,6 @@ exports.login = async (req, res, next) => {
 
     //create jwt
     const token = user.getJwt();
-
-    //setting password to undefined
-    user.password = undefined;
 
     return res.status(200).json({
       success: true,
